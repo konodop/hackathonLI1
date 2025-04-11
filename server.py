@@ -1,6 +1,7 @@
 import os
 import re
 import sqlite3
+from datetime import datetime
 
 import qrcode
 from fastapi import FastAPI, UploadFile, File, Form
@@ -266,18 +267,20 @@ async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
     students = QRscan(filepath)
     if place == "Учитель":
         studs = []
+
         for id in students:
             cur.execute("""SELECT * FROM Student WHERE id = ?;""", (id,))
             studs.append(cur.fetchone())
         return {"message": studs}
     else:
+        now = datetime.now().strftime("%H:%M:%S")
         for id in students:
             if place[11:-2] == "Столовая":
-                cur.execute("""UPDATE School_attendance SET lunch = 1 WHERE id = ?;""", (id,))
+                cur.execute(f"""UPDATE School_attendance SET lunch = {now} WHERE id = ?;""", (id,))
             elif place[11:-2] == "Вход":
-                cur.execute("""UPDATE School_attendance SET come = 1 WHERE id = ?;""", (id,))
+                cur.execute(f"""UPDATE School_attendance SET come = {now} WHERE id = ?;""", (id,))
             elif place[11:-2] == "Выход":
-                cur.execute("""UPDATE School_attendance SET out = 1 WHERE id = ?;""", (id,))
+                cur.execute(f"""UPDATE School_attendance SET out = {now} WHERE id = ?;""", (id,))
             conn.commit()
 
         return {"message": "Данные обновлены"}
