@@ -258,6 +258,20 @@ def qrcodicki(sign_up_request: SignInRequest):
     )
 
 
+@app.get("/api/skips")
+async def skips():
+    skip = "00:00:00"
+    cur.execute("""SELECT id FROM School_attendance WHERE come = ?;""", (skip,))
+    s = cur.fetchall()
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": s
+        },
+    )
+
+
+
 @app.post("/api/upload")
 async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
