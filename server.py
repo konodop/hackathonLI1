@@ -33,8 +33,7 @@ class SignUpRequestTeacher(BaseModel):
     surname: str
     name: str
     fathername: str
-    login: str
-    password: str
+    tg_id: str
     subject: str
 
 
@@ -43,13 +42,11 @@ class SignUpRequestStud(BaseModel):
     name: str
     fathername: str
     clas: str
-    login: str
-    password: str
+    tg_id: str
 
 
 class SignInRequest(BaseModel):
-    login: str
-    password: str
+    tg_id: str
 
 
 def generate_qr(data, filename):
@@ -75,13 +72,9 @@ def star(sign_up_request: SignUpRequestTeacher):
     name = sign_up_request.name
     surname = sign_up_request.surname
     fathername = sign_up_request.fathername
-    login = sign_up_request.login
-    password = sign_up_request.password
+    tg_id = sign_up_request.tg_id
     subject = sign_up_request.subject
-    patternem = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}$'
-    if len(name) < 2 or len(name) > 30 or len(surname) < 3 or len(surname) > 30 or len(login) < 8 or len(
-            login) > 120 or len(password) < 8 or len(
-        password) > 30 or " " in password or not re.match(patternem, login):
+    if len(name) < 2 or len(name) > 30 or len(surname) < 3 or len(surname) > 30:
         return JSONResponse(
             status_code=400,
             content={
@@ -89,13 +82,13 @@ def star(sign_up_request: SignUpRequestTeacher):
                 "message": "Ошибка в данных запроса."
             },
         )
-    cur.execute("""SELECT * FROM Teacher WHERE login = ?;""", (login,))
+    cur.execute("""SELECT * FROM Teacher WHERE tg_id = ?;""", (tg_id,))
     if cur.fetchone():
         return JSONResponse(
             status_code=409,
             content={
                 "status": "error",
-                "message": "Такой логин уже зарегистрирован."
+                "message": "Такой аккаунт уже зарегистрирован."
             },
         )
     cur.execute("""SELECT * FROM Teacher WHERE name = ? AND surname = ?;""", (name, surname,))
@@ -107,8 +100,8 @@ def star(sign_up_request: SignUpRequestTeacher):
                 "message": "Такой учитель уже зарегистрирован."
             },
         )
-    teach = (surname, name, fathername, login, password, subject)
-    cur.execute("""INSERT INTO Teacher (surname, name, fathername, login, password, school_subject)
+    teach = (surname, name, fathername, tg_id, subject)
+    cur.execute("""INSERT INTO Teacher (surname, name, fathername, tg_id, school_subject)
      VALUES (?, ?, ?, ?, ?, ?);""", teach)
 
     conn.commit()
@@ -125,13 +118,9 @@ def qrcodicki(sign_up_request: SignUpRequestStud):
     name = sign_up_request.name
     surname = sign_up_request.surname
     fathername = sign_up_request.fathername
-    login = sign_up_request.login
-    password = sign_up_request.password
+    tg_id = sign_up_request.tg_id
     clas = sign_up_request.clas
-    patternem = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}$'
-    if len(name) < 2 or len(name) > 30 or len(surname) < 3 or len(surname) > 30 or len(login) < 8 or len(
-            login) > 120 or len(password) < 8 or len(
-        password) > 30 or " " in password or not re.match(patternem, login):
+    if len(name) < 2 or len(name) > 30 or len(surname) < 3 or len(surname) > 30:
         return JSONResponse(
             status_code=400,
             content={
@@ -139,13 +128,13 @@ def qrcodicki(sign_up_request: SignUpRequestStud):
                 "message": "Ошибка в данных запроса."
             },
         )
-    cur.execute("""SELECT * FROM Student WHERE login = ?;""", (login,))
+    cur.execute("""SELECT * FROM Student WHERE tg_id = ?;""", (tg_id,))
     if cur.fetchone():
         return JSONResponse(
-            status_code=409,
+            status_code=400,
             content={
                 "status": "error",
-                "message": "Такой логин уже зарегистрирован."
+                "message": "Такой аккаунт уже зарегистрирован."
             },
         )
     cur.execute("""SELECT * FROM Student WHERE name = ? AND surname = ?;""", (name, surname,))
@@ -157,10 +146,10 @@ def qrcodicki(sign_up_request: SignUpRequestStud):
                 "message": "Такой ученик уже зарегистрирован."
             },
         )
-    stud = (surname, name, fathername, clas, login, password)
+    stud = (surname, name, fathername, clas, tg_id)
     # qr code
-    cur.execute("""INSERT INTO Student (surname, name, fathername, class, login, password)
-     VALUES (?, ?, ?, ?, ?, ?);""", stud)
+    cur.execute("""INSERT INTO Student (surname, name, fathername, class, tg_id)
+     VALUES (?, ?, ?, ?, ?);""", stud)
 
     conn.commit()
     cur.execute("""SELECT * FROM Student WHERE name = ? AND surname = ?;""", (name, surname,))
@@ -178,9 +167,8 @@ def qrcodicki(sign_up_request: SignUpRequestStud):
 
 @app.post("/api/profile", tags=["B2B"])
 def prof(sign_up_request: SignInRequest):
-    login = sign_up_request.login
-    password = sign_up_request.password
-    cur.execute("""SELECT * FROM Student WHERE login = ? AND password = ?;""", (login, password,))
+    tg_id = sign_up_request.tg_id
+    cur.execute("""SELECT * FROM Student WHERE tg_id = ?;""", (tg_id,))
     stud = cur.fetchone()
     if stud:
         return JSONResponse(
@@ -189,7 +177,7 @@ def prof(sign_up_request: SignInRequest):
                 "message": "ученик"
             },
         )
-    cur.execute("""SELECT * FROM Teacher WHERE login = ? AND password = ?;""", (login, password,))
+    cur.execute("""SELECT * FROM Teacher WHERE tg_id = ?;""", (tg_id,))
     teach = cur.fetchone()
     if teach:
         return JSONResponse(
@@ -198,7 +186,7 @@ def prof(sign_up_request: SignInRequest):
                 "message": "учитель"
             },
         )
-    cur.execute("""SELECT * FROM Parent WHERE login = ? AND password = ?;""", (login, password,))
+    cur.execute("""SELECT * FROM Parent WHERE tg_id = ?;""", (tg_id,))
     par = cur.fetchone()
     if par:
         return JSONResponse(
@@ -218,34 +206,15 @@ def prof(sign_up_request: SignInRequest):
 
 @app.post("/api/getQR", tags=["B2B"])
 def qrcodicki(sign_up_request: SignInRequest):
-    login = sign_up_request.login
-    password = sign_up_request.password
-    patternem = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}$'
-    if len(login) > 120 or len(password) < 8 or len(password) > 30 or " " in password or not re.match(patternem, login):
-        return JSONResponse(
-            status_code=400,
-            content={
-                "status": "error",
-                "message": "Ошибка в данных запроса."
-            },
-        )
-    cur.execute("""SELECT * FROM Student WHERE login = ?;""", (login,))
-    if not cur.fetchone():
-        return JSONResponse(
-            status_code=400,
-            content={
-                "status": "error",
-                "message": "На этот логин никто не зарегестрирован"
-            },
-        )
-    cur.execute("""SELECT * FROM Student WHERE login = ? AND password = ?;""", (login, password,))
+    tg_id = sign_up_request.tg_id
+    cur.execute("""SELECT * FROM Student WHERE tg_id = ?;""", (tg_id,))
     id = cur.fetchone()[0]
     if not id:
         return JSONResponse(
-            status_code=409,
+            status_code=422,
             content={
                 "status": "error",
-                "message": "Неправильный пароль."
+                "message": "На этот аккаунт никто не зарегестрирован"
             },
         )
     filename = os.path.join(QR_FOLDER, f"{id}_qr.png")
@@ -263,13 +232,15 @@ async def skips():
     skip = "00:00:00"
     cur.execute("""SELECT id FROM School_attendance WHERE come = ?;""", (skip,))
     s = cur.fetchall()
+    d = []
+    for id in s:
+        d.append(cur.execute("""SELECT tg_id FROM Parent WHERE son = ?;""", (id[0],))[0])
     return JSONResponse(
         status_code=200,
         content={
-            "message": s
+            "message": d
         },
     )
-
 
 
 @app.post("/api/upload")
