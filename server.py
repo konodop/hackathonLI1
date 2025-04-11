@@ -197,9 +197,9 @@ def qrcodicki(sign_up_request: SignInRequest):
                 "message": "На этот логин никто не зарегестрирован"
             },
         )
-    id = cur.execute("""SELECT id FROM Student WHERE login = ? AND password = ?;""", (login, password,))
-    stud = cur.fetchone()
-    if not stud:
+    cur.execute("""SELECT * FROM Student WHERE login = ? AND password = ?;""", (login, password,))
+    id = cur.fetchone()[0]
+    if not id:
         return JSONResponse(
             status_code=409,
             content={
@@ -209,6 +209,7 @@ def qrcodicki(sign_up_request: SignInRequest):
         )
     filename = f"{id}_qr"
     if not os.path.exists(filename):
+        filename = os.path.join(QR_FOLDER, f"{id}_qr.png")
         generate_qr(id, filename)
     return JSONResponse(
         status_code=200,
