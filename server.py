@@ -264,16 +264,23 @@ async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
         content = await file.read()
         f.write(content)
     students = QRscan(filepath)
-    for id in students:
-        if place[11:-2] == "Столовая":
-            cur.execute("""UPDATE School_attendance SET lunch = 1 WHERE id = ?;""", (id,))
-        elif place[11:-2] == "Вход":
-            cur.execute("""UPDATE School_attendance SET come = 1 WHERE id = ?;""", (id,))
-        elif place[11:-2] == "Выход":
-            cur.execute("""UPDATE School_attendance SET out = 1 WHERE id = ?;""", (id,))
-        conn.commit()
+    if place == "Учитель":
+        studs = []
+        for id in students:
+            cur.execute("""SELECT * FROM Student WHERE id = ?;""", (id,))
+            studs.append(cur.fetchone())
+        return {"message": studs}
+    else:
+        for id in students:
+            if place[11:-2] == "Столовая":
+                cur.execute("""UPDATE School_attendance SET lunch = 1 WHERE id = ?;""", (id,))
+            elif place[11:-2] == "Вход":
+                cur.execute("""UPDATE School_attendance SET come = 1 WHERE id = ?;""", (id,))
+            elif place[11:-2] == "Выход":
+                cur.execute("""UPDATE School_attendance SET out = 1 WHERE id = ?;""", (id,))
+            conn.commit()
 
-    return {"message": "Данные обновлены"}
+        return {"message": "Данные обновлены"}
 
 
 @app.get("/api/ping")
