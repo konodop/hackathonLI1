@@ -175,6 +175,46 @@ def qrcodicki(sign_up_request: SignUpRequestStud):
     )
 
 
+@app.post("/api/profile", tags=["B2B"])
+def prof(sign_up_request: SignInRequest):
+    login = sign_up_request.login
+    password = sign_up_request.password
+    cur.execute("""SELECT * FROM Student WHERE login = ? AND password = ?;""", (login, password,))
+    stud = cur.fetchone()
+    if stud:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "ученик"
+            },
+        )
+    cur.execute("""SELECT * FROM Teacher WHERE login = ? AND password = ?;""", (login, password,))
+    teach = cur.fetchone()
+    if teach:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "учитель"
+            },
+        )
+    cur.execute("""SELECT * FROM Parent WHERE login = ? AND password = ?;""", (login, password,))
+    par = cur.fetchone()
+    if par:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "родитель"
+            },
+        )
+    else:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "message": "Не зарегестрирован"
+            },
+        )
+
+
 @app.post("/api/getQR", tags=["B2B"])
 def qrcodicki(sign_up_request: SignInRequest):
     login = sign_up_request.login
@@ -191,7 +231,7 @@ def qrcodicki(sign_up_request: SignInRequest):
     cur.execute("""SELECT * FROM Student WHERE login = ?;""", (login,))
     if not cur.fetchone():
         return JSONResponse(
-            status_code=409,
+            status_code=400,
             content={
                 "status": "error",
                 "message": "На этот логин никто не зарегестрирован"
@@ -207,14 +247,12 @@ def qrcodicki(sign_up_request: SignInRequest):
                 "message": "Неправильный пароль."
             },
         )
-    filename = f"{id}_qr"
-    if not os.path.exists(filename):
-        filename = os.path.join(QR_FOLDER, f"{id}_qr.png")
-        generate_qr(id, filename)
+    filename = os.path.join(QR_FOLDER, f"{id}_qr.png")
+    generate_qr(id, filename)
     return JSONResponse(
         status_code=200,
         content={
-            "message": filename
+            "message": filename.replace("\\", "/")
         },
     )
 
