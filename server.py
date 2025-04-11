@@ -1,6 +1,8 @@
 import os
 import re
 import sqlite3
+
+import qrcode
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 import uvicorn
@@ -9,9 +11,11 @@ from qreader import QReader
 import cv2
 
 UPLOAD_FOLDER = './uploads'
+QR_FOLDER = './qrs'
 
 # Убедитесь, что папка для загрузок существует
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(QR_FOLDER, exist_ok=True)
 
 qreader = QReader()
 app = FastAPI()
@@ -22,6 +26,7 @@ cur = conn.cursor()
 
 class ForCameras(BaseModel):
     place: str
+
 
 class SignUpRequestTeacher(BaseModel):
     surname: str
@@ -44,6 +49,19 @@ class SignUpRequestStud(BaseModel):
 class SignInRequest(BaseModel):
     login: str
     password: str
+
+
+def generate_qr(data, filename):
+    qr = qrcode.QRCode(
+        version=1,  # Размер QR-кода (1 — наименьший, 40 — наибольший)
+        error_correction=qrcode.constants.ERROR_CORRECT_H,  # Высокий уровень коррекции ошибок
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    img.save(filename)
 
 
 def QRscan(filepath):
@@ -102,56 +120,6 @@ def star(sign_up_request: SignUpRequestTeacher):
 
 
 @app.post("/api/student/sign-up", tags=["B2B"])
-def student_regayetsya(sign_up_request: SignUpRequestStud):
-    name = sign_up_request.name
-    surname = sign_up_request.surname
-    fathername = sign_up_request.fathername
-    login = sign_up_request.login
-    password = sign_up_request.password
-    clas = sign_up_request.clas
-    patternem = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}$'
-    if len(name) < 2 or len(name) > 30 or len(surname) < 3 or len(surname) > 30 or len(login) < 8 or len(
-            login) > 120 or len(password) < 8 or len(
-        password) > 30 or " " in password or not re.match(patternem, login):
-        return JSONResponse(
-            status_code=400,
-            content={
-                "status": "error",
-                "message": "Ошибка в данных запроса."
-            },
-        )
-    cur.execute("""SELECT * FROM Student WHERE login = ?;""", (login,))
-    if cur.fetchone():
-        return JSONResponse(
-            status_code=409,
-            content={
-                "status": "error",
-                "message": "Такой логин уже зарегистрирован."
-            },
-        )
-    cur.execute("""SELECT * FROM Student WHERE name = ? AND surname = ?;""", (name, surname,))
-    if cur.fetchone():
-        return JSONResponse(
-            status_code=409,
-            content={
-                "status": "error",
-                "message": "Такой ученик уже зарегистрирован."
-            },
-        )
-    stud = (surname, name, fathername, clas, login, password)
-    cur.execute("""INSERT INTO Student (surname, name, fathername, class, login, password)
-     VALUES (?, ?, ?, ?, ?, ?);""", stud)
-
-    conn.commit()
-    return JSONResponse(
-        status_code=201,
-        content={
-            "message": "Спасибо за регистрацию"
-        },
-    )
-
-
-@app.post("/api/student/sign-up", tags=["B2B"])
 def qrcodicki(sign_up_request: SignUpRequestStud):
     name = sign_up_request.name
     surname = sign_up_request.surname
@@ -194,6 +162,11 @@ def qrcodicki(sign_up_request: SignUpRequestStud):
      VALUES (?, ?, ?, ?, ?, ?);""", stud)
 
     conn.commit()
+    cur.execute("""SELECT * FROM Student WHERE name = ? AND surname = ?;""", (name, surname,))
+    id = cur.fetchone()[0]
+    filename = os.path.join(QR_FOLDER, f"{id}_qr.png")  # Полный путь к файлу
+    generate_qr(id, filename)
+
     return JSONResponse(
         status_code=201,
         content={
@@ -255,8 +228,9 @@ async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
             cur.execute("""UPDATE School_attendance SET lunch = 1 WHERE id = ?;""", (id,))
         elif place[11:-2] == "Вход":
             cur.execute("""UPDATE School_attendance SET come = 1 WHERE id = ?;""", (id,))
-        if place[11:-2] == "Выход":
+        elif place[11:-2] == "Выход":
             cur.execute("""UPDATE School_attendance SET out = 1 WHERE id = ?;""", (id,))
+        conn.commit()
 
     return {"message": "Данные обновлены"}
 
