@@ -241,7 +241,7 @@ def send():
 
 
 if __name__ == "__main__":
-    server_address = os.getenv("SERVER_ADDRESS", "0.0.0.0:8080")  # 127.0.0.1:8080
+    server_address = "127.0.0.1:8080"  # 127.0.0.1:8080
     host, port = server_address.split(":")
     uvicorn.run(app, host=host, port=int(port))
 cur.close()
