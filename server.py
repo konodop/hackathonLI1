@@ -30,6 +30,12 @@ class ForCameras(BaseModel):
     place: str
 
 
+class FIO(BaseModel):
+    name: str
+    surname: str
+    fathername: str
+
+
 class SignUpRequestTeacher(BaseModel):
     surname: str
     name: str
@@ -213,6 +219,23 @@ def qrcodicki(sign_up_request: SignUpRequestStud):
             "message": "Спасибо за регистрацию"
         },
     )
+
+
+# эта функция выводит кем, является пользователь в телеграмме
+@app.post("/api/come")
+def prof(sign_up_request: FIO):
+    name = sign_up_request.name
+    surname = sign_up_request.surname
+    fathername = sign_up_request.fathername
+    cur.execute("""SELECT id FROM Student WHERE name = ? AND surname = ? AND fathername = ?;""", (name, surname, fathername,))
+    ok = cur.fetchone()
+    if ok:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": id
+            },
+        )
 
 
 # эта функция выводит кем, является пользователь в телеграмме
