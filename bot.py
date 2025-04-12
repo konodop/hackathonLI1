@@ -186,7 +186,7 @@ async def cmd_read(message: types.Message, state: FSMContext):
     tg_id = info["from_user"]["username"]
     status, post = get_user_info(tg_id, info)
 
-    if status != 200 or post != "учитель" or post != "воспитатель":
+    if status != 200 and post != "учитель" and post != "воспитатель":
         await message.answer(
             "Не хватает прав на использование бота\n"
             "Чтобы решить эту проблему обратитесь к администратору"
@@ -230,7 +230,7 @@ async def handle_image(message: types.Message, state: FSMContext):
     for i in res:
         try:
             data = i[i.find("'"):-1].split(", ")
-            text += f"{data[1][1:-1]} {data[2][1:-1]} {data[3][1:-1]}\n"
+            text += f"{data[1][1:-1]} {data[2][1:-1]} {data[3][1:-1]} {data[4][1:-1]}\n"
             k += 1
         except:
             pass
@@ -242,47 +242,6 @@ async def handle_image(message: types.Message, state: FSMContext):
 @dp.message(ReadStates.waiting_for_image)
 async def handle_wrong_input(message: types.Message):
     await message.answer("Пожалуйста, отправьте изображение.")
-
-
-# Обработчик текстовых сообщений
-# @dp.message()
-# async def echo(message: types.Message):
-#     info = json.loads(message.model_dump_json())
-#     tg_id = info["from_user"]["username"]
-#     if tg_id[0] != "@":
-#         tg_id = "@" + tg_id
-#     status, post = get_user_info(tg_id, info)
-#     if status != 200:
-#         await message.answer(
-#             "Не хватает прав на использование бота\n"
-#             "Чтобы решить эту проблему обратитесь к администратору"
-#         )
-#
-#     if post == "ученик":
-#         pass
-#     if post == "учитель":
-#         # await message.answer(
-#         #     "Это справочная информация:\n"
-#         #     "/start - начать сначала\n"
-#         #     "/help - помощь\n"
-#         #     "/info - информация\n"
-#         #     "/read_qr_code - считать qr-code",
-#         # )
-#         text = message.text.split("\n")
-#         if text[0] == "come":
-#             for st in text[1:]:
-#                 url = f"http://127.0.0.1:8080/api/"
-#                 if tg_id[0] != "@":
-#                     tg_id = "@" + tg_id
-#                 res = requests.post(url, json={"tg_id": tg_id})
-#     # if post == "родитель":
-#     # await message.answer(
-#     #     "Это справочная информация:\n"
-#     #     "/start - начать сначала\n"
-#     #     "/help - помощь\n"
-#     #     "/info - информация\n"
-#     #     "/about_child - о ребенке",
-#     # )
 
 
 async def send_to_parent():
