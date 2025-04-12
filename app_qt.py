@@ -84,9 +84,9 @@ class MainWindow(QWidget):
     def __init__(self):
         # Проводим инициализацию
         super().__init__()
-        self.login = "ADMIN"
         self.initUI()
         self.entrance = Entrance(self)
+        self.pushwindow = None
 
         self.con = sqlite3.connect("database.sqlite")
         self.cursor = self.con.cursor()
@@ -110,6 +110,7 @@ class MainWindow(QWidget):
         self.сreationBtn.setStyleSheet("background-color: white")
         self.сreationBtn.setFont(font(s=12))
         self.сreationBtn.setGeometry(40, 85, 120, 30)
+        self.сreationBtn.clicked.connect(self.pushwindowAct)
 
         self.сhangeBtn = QPushButton(self)
         self.сhangeBtn.setText("Изменение")
@@ -139,6 +140,256 @@ class MainWindow(QWidget):
     def entranceAct(self):
         self.setVisible(False)
         self.entrance()
+
+    def pushwindowAct(self):
+        # self.setVisible(False)
+        self.pushwindow = PushWindow(self)
+        self.pushwindow()
+
+class PushWindow(QWidget):
+    def __init__(self, mainwindow):
+        # Проводим инициализацию
+        super().__init__()
+
+        self.initUI()
+        self.mainwindow = mainwindow
+
+    def initUI(self):
+        # Этот метод для создания интерфейса
+        self.setFixedSize(600, 300)
+        self.setWindowTitle("Push")
+
+        self.setStyleSheet("background-color: grey")
+        self.setStyleSheet("border-radius: 10px")
+        self.setFont(font())
+
+        self.head = QLabel("Добавить", self)
+        self.head.setFont(font(s=18))
+        self.head.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.head.setGeometry(35, 30, 130, 30)
+
+        self.sp = QComboBox(self)
+        self.sp.addItems(["ученик", "родитель", "учитель", "воспитатель"])
+        self.sp.setStyleSheet("background-color: white")
+        self.sp.setFont(font(s=12))
+        self.sp.setGeometry(40, 85, 120, 30)
+        self.sp.currentTextChanged.connect(self.act)
+
+        ## student
+
+        self.id_student = QLineEdit(self)
+        self.id_student.setPlaceholderText("id")
+        self.id_student.setStyleSheet("background-color: white")
+        self.id_student.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.id_student.setFont(font(s=12))
+        self.id_student.setGeometry(100, 85, 130, 30)
+        self.id_student.setVisible(False)
+
+        self.surname_student = QLineEdit(self)
+        self.surname_student.setPlaceholderText("id")
+        self.surname_student.setStyleSheet("background-color: white")
+        self.surname_student.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.surname_student.setFont(font(s=12))
+        self.surname_student.setGeometry(100, 120, 130, 30)
+        self.surname_student.setVisible(False)
+
+        self.fathername_student = QLineEdit(self)
+        self.fathername_student.setPlaceholderText("id")
+        self.fathername_student.setStyleSheet("background-color: white")
+        self.fathername_student.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.fathername_student.setFont(font(s=12))
+        self.fathername_student.setGeometry(100, 155, 130, 30)
+        self.fathername_student.setVisible(False)
+
+        self.class_student = QLineEdit(self)
+        self.class_student.setPlaceholderText("id")
+        self.class_student.setStyleSheet("background-color: white")
+        self.class_student.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.class_student.setFont(font(s=12))
+        self.class_student.setGeometry(230, 85, 130, 30)
+        self.class_student.setVisible(False)
+
+        self.tg_id_student = QLineEdit(self)
+        self.tg_id_student.setPlaceholderText("id")
+        self.tg_id_student.setStyleSheet("background-color: white")
+        self.tg_id_student.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tg_id_student.setFont(font(s=12))
+        self.tg_id_student.setGeometry(230, 120, 130, 30)
+        self.tg_id_student.setVisible(False)
+
+        ## parent
+
+        self.id_parent = QLineEdit(self)
+        self.id_parent.setPlaceholderText("id")
+        self.id_parent.setStyleSheet("background-color: white")
+        self.id_parent.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.id_parent.setFont(font(s=12))
+        self.id_parent.setGeometry(100, 85, 130, 30)
+        self.id_parent.setVisible(False)
+
+        self.son_parent = QLineEdit(self)
+        self.son_parent.setPlaceholderText("id")
+        self.son_parent.setStyleSheet("background-color: white")
+        self.son_parent.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.son_parent.setFont(font(s=12))
+        self.son_parent.setGeometry(100, 120, 130, 30)
+        self.son_parent.setVisible(False)
+
+        self.tg_id_parent = QLineEdit(self)
+        self.tg_id_parent.setPlaceholderText("id")
+        self.tg_id_parent.setStyleSheet("background-color: white")
+        self.tg_id_parent.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tg_id_parent.setFont(font(s=12))
+        self.tg_id_parent.setGeometry(100, 155, 130, 30)
+        self.tg_id_parent.setVisible(False)
+
+        ## Abuy
+
+        self.id_abuy = QLineEdit(self)
+        self.id_abuy.setPlaceholderText("id")
+        self.id_abuy.setStyleSheet("background-color: white")
+        self.id_abuy.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.id_abuy.setFont(font(s=12))
+        self.id_abuy.setGeometry(100, 85, 130, 30)
+        self.id_abuy.setVisible(False)
+
+        self.surname_abuy = QLineEdit(self)
+        self.surname_abuy.setPlaceholderText("id")
+        self.surname_abuy.setStyleSheet("background-color: white")
+        self.surname_abuy.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.surname_abuy.setFont(font(s=12))
+        self.surname_abuy.setGeometry(100, 120, 130, 30)
+        self.surname_abuy.setVisible(False)
+
+        self.fathername_abuy = QLineEdit(self)
+        self.fathername_abuy.setPlaceholderText("id")
+        self.fathername_abuy.setStyleSheet("background-color: white")
+        self.fathername_abuy.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.fathername_abuy.setFont(font(s=12))
+        self.fathername_abuy.setGeometry(100, 155, 130, 30)
+        self.fathername_abuy.setVisible(False)
+
+        self.tg_id_abuy = QLineEdit(self)
+        self.tg_id_abuy.setPlaceholderText("id")
+        self.tg_id_abuy.setStyleSheet("background-color: white")
+        self.tg_id_abuy.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tg_id_abuy.setFont(font(s=12))
+        self.tg_id_abuy.setGeometry(230, 85, 130, 30)
+        self.tg_id_abuy.setVisible(False)
+
+        ## Teacher
+
+        self.id_teacher = QLineEdit(self)
+        self.id_teacher.setPlaceholderText("id")
+        self.id_teacher.setStyleSheet("background-color: white")
+        self.id_teacher.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.id_teacher.setFont(font(s=12))
+        self.id_teacher.setGeometry(100, 85, 130, 30)
+        self.id_teacher.setVisible(False)
+
+        self.name_teacher = QLineEdit(self)
+        self.name_teacher.setPlaceholderText("id")
+        self.name_teacher.setStyleSheet("background-color: white")
+        self.name_teacher.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_teacher.setFont(font(s=12))
+        self.name_teacher.setGeometry(100, 120, 130, 30)
+        self.name_teacher.setVisible(False)
+
+        self.surname_teacher = QLineEdit(self)
+        self.surname_teacher.setPlaceholderText("id")
+        self.surname_teacher.setStyleSheet("background-color: white")
+        self.surname_teacher.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.surname_teacher.setFont(font(s=12))
+        self.surname_teacher.setGeometry(100, 155, 130, 30)
+        self.surname_teacher.setVisible(False)
+
+        self.fathername_teacher = QLineEdit(self)
+        self.fathername_teacher.setPlaceholderText("id")
+        self.fathername_teacher.setStyleSheet("background-color: white")
+        self.fathername_teacher.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.fathername_teacher.setFont(font(s=12))
+        self.fathername_teacher.setGeometry(230, 85, 130, 30)
+        self.fathername_teacher.setVisible(False)
+
+        self.tg_id_teacher = QLineEdit(self)
+        self.tg_id_teacher.setPlaceholderText("id")
+        self.tg_id_teacher.setStyleSheet("background-color: white")
+        self.tg_id_teacher.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tg_id_teacher.setFont(font(s=12))
+        self.tg_id_teacher.setGeometry(230, 120, 130, 30)
+        self.tg_id_teacher.setVisible(False)
+
+        self.subject_teacher = QLineEdit(self)
+        self.subject_teacher.setPlaceholderText("id")
+        self.subject_teacher.setStyleSheet("background-color: black")
+        self.subject_teacher.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.subject_teacher.setFont(font(s=12))
+        self.subject_teacher.setGeometry(230, 155, 130, 30)
+        self.subject_teacher.setVisible(False)
+
+        self.pushBtn = QPushButton("12222")
+        self.subject_teacher.setStyleSheet("background-color: black")
+        self.subject_teacher.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.subject_teacher.setFont(font(s=12))
+        self.subject_teacher.setGeometry(0, 0, 130, 30)
+
+
+    def act(self):
+        ## Student
+        self.id_student.setVisible(False)
+        self.surname_student.setVisible(False)
+        self.fathername_student.setVisible(False)
+        self.class_student.setVisible(False)
+        self.tg_id_student.setVisible(False)
+
+        ## Parent
+        self.id_parent.setVisible(False)
+        self.son_parent.setVisible(False)
+        self.tg_id_parent.setVisible(False)
+
+        ## Abuy
+        self.id_abuy.setVisible(False)
+        self.surname_abuy.setVisible(False)
+        self.fathername_abuy.setVisible(False)
+        self.tg_id_abuy.setVisible(False)
+
+        ## Teacher
+        self.id_teacher.setVisible(False)
+        self.name_teacher.setVisible(False)
+        self.surname_teacher.setVisible(False)
+        self.fathername_teacher.setVisible(False)
+        self.tg_id_teacher.setVisible(False)
+        self.subject_teacher.setVisible(False)
+
+        if self.sp.currentText() == "ученик":
+            self.id_student.setVisible(True)
+            self.surname_student.setVisible(True)
+            self.fathername_student.setVisible(True)
+            self.class_student.setVisible(True)
+            self.tg_id_student.setVisible(True)
+
+        if self.sp.currentText() == "родитель":
+            self.id_parent.setVisible(True)
+            self.son_parent.setVisible(True)
+            self.tg_id_parent.setVisible(True)
+
+        if self.sp.currentText() == "воспитатель":
+            self.id_abuy.setVisible(True)
+            self.surname_abuy.setVisible(True)
+            self.fathername_abuy.setVisible(True)
+            self.tg_id_abuy.setVisible(True)
+
+        if self.sp.currentText() == "учитель":
+            self.id_teacher.setVisible(True)
+            self.name_teacher.setVisible(True)
+            self.surname_teacher.setVisible(True)
+            self.fathername_teacher.setVisible(True)
+            self.tg_id_teacher.setVisible(True)
+            self.subject_teacher.setVisible(True)
+
+
+    def __call__(self):
+        self.setVisible(True)
 
 
 def except_hook(cls, exception, traceback):
