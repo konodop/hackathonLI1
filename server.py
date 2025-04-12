@@ -20,10 +20,12 @@ os.makedirs(QR_FOLDER, exist_ok=True)
 qreader = QReader()
 app = FastAPI()
 
+# подключение к базе данных
 conn = sqlite3.connect('database.sqlite', check_same_thread=False)
 cur = conn.cursor()
 
 
+# по этому формату фронт общается с сервером
 class ForCameras(BaseModel):
     place: str
 
@@ -61,11 +63,13 @@ def generate_qr(data, filename):
     img.save(filename)
 
 
+# сканнер QRкодов, читает текст на них
 def QRscan(filepath):
     image = cv2.cvtColor(cv2.imread(filepath), cv2.COLOR_BGR2RGB)
     return qreader.detect_and_decode(image=image)
 
 
+# регистрация для учителей
 @app.post("/api/teacher/sign-up", tags=["B2B"])
 def star(sign_up_request: SignUpRequestTeacher):
     name = sign_up_request.name
@@ -112,6 +116,7 @@ def star(sign_up_request: SignUpRequestTeacher):
     )
 
 
+# регистрация для воспитателей
 @app.post("/api/vospit/sign-up", tags=["B2B"])
 def star(sign_up_request: SignUpRequestTeacher):
     name = sign_up_request.name
@@ -157,6 +162,7 @@ def star(sign_up_request: SignUpRequestTeacher):
     )
 
 
+# регистрация для студентов
 @app.post("/api/student/sign-up", tags=["B2B"])
 def qrcodicki(sign_up_request: SignUpRequestStud):
     name = sign_up_request.name
@@ -209,7 +215,8 @@ def qrcodicki(sign_up_request: SignUpRequestStud):
     )
 
 
-@app.post("/api/profile", tags=["B2B"])
+# эта функция выводит кем, является пользователь в телеграмме
+@app.post("/api/profile")
 def prof(sign_up_request: SignInRequest):
     tg_id = sign_up_request.tg_id
     print(tg_id)
@@ -258,7 +265,8 @@ def prof(sign_up_request: SignInRequest):
         )
 
 
-@app.post("/api/getQR", tags=["B2B"])
+# создаёт qr код на ученика чей телеграмм ввели
+@app.post("/api/getQR")
 def qrcodicki(sign_up_request: SignInRequest):
     tg_id = sign_up_request.tg_id
     print(tg_id)
@@ -282,12 +290,14 @@ def qrcodicki(sign_up_request: SignInRequest):
     )
 
 
+# функция проверки пропусков учеников
 @app.get("/api/skips")
 async def skips():
     skip = "00:00:00"
     cur.execute("""SELECT id FROM School_attendance WHERE come = ?;""", (skip,))
     s = cur.fetchall()
     parents = []
+    # выводит родителей этих учеников
     for id in s:
         cur.execute("""SELECT tg_id FROM Parent WHERE son = ?;""", (id[0],))
         parent = cur.fetchone()
@@ -300,6 +310,7 @@ async def skips():
     )
 
 
+# какие ученики сейчас в интернате
 @app.get("/api/dorm")
 async def indor():
     cur.execute("""SELECT tg_id FROM School_attendance WHERE at_boarding_school = 1;""")
@@ -315,6 +326,7 @@ async def indor():
     )
 
 
+# загрузка qr кодов
 @app.post("/api/upload")
 async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
