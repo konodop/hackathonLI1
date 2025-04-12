@@ -10,15 +10,15 @@ from aiogram.filters.command import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import InputFile, FSInputFile
+from aiogram.types import FSInputFile
 
 
 # Состояния FSM
 class ReadStates(StatesGroup):
     waiting_for_image = State()
 
-def get_user_info(tg_id, info=None):
-    get_info = False
+
+def get_user_info(tg_id, info=None, get_info=False):
     url = f"http://127.0.0.1:8080/api/profile"
     if tg_id[0] != "@":
         tg_id = "@" + tg_id
@@ -44,10 +44,12 @@ storage = MemoryStorage()
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+
 # Состояния бота
 class UserStates(StatesGroup):
     waiting_for_image = State()
     choosing_operation = State()
+
 
 # Обработчик команды /start
 @dp.message(Command("start"))
@@ -178,7 +180,6 @@ async def cmd_create(message: types.Message):
         logging.error(f"Ошибка: {str(e)}")
 
 
-
 @dp.message(Command("read_qr_code"))
 async def cmd_read(message: types.Message, state: FSMContext):
     info = json.loads(message.model_dump_json())
@@ -222,8 +223,19 @@ async def handle_image(message: types.Message, state: FSMContext):
         'place': (None, str(place_data))  # Отправляем place как строку
     }
 
-    res = requests.post(url, files=files)
-    print(res.json())
+    res = requests.post(url, files=files).json()['message']
+    text = ""
+
+    k = 0
+    for i in res:
+        try:
+            data = i[i.find("'"):-1].split(", ")
+            text += f"{data[1][1:-1]} {data[2][1:-1]} {data[3][1:-1]}\n"
+            k += 1
+        except:
+            pass
+    text = f"Увидел {k} Qr-кодов\n" + text
+    await message.answer(text)
 
 
 # Обработчик случая, когда ожидается фото, но пришло что-то другое
@@ -231,12 +243,14 @@ async def handle_image(message: types.Message, state: FSMContext):
 async def handle_wrong_input(message: types.Message):
     await message.answer("Пожалуйста, отправьте изображение.")
 
-#
-# # Обработчик текстовых сообщений
+
+# Обработчик текстовых сообщений
 # @dp.message()
 # async def echo(message: types.Message):
 #     info = json.loads(message.model_dump_json())
-#     tg_id = "@" + info["from_user"]["username"]
+#     tg_id = info["from_user"]["username"]
+#     if tg_id[0] != "@":
+#         tg_id = "@" + tg_id
 #     status, post = get_user_info(tg_id, info)
 #     if status != 200:
 #         await message.answer(
@@ -245,29 +259,31 @@ async def handle_wrong_input(message: types.Message):
 #         )
 #
 #     if post == "ученик":
-#         await message.answer(
-#             "Это справочная информация:\n"
-#             "/start - начать сначала\n"
-#             "/help - помощь\n"
-#             "/info - информация\n"
-#             "/create_qr_code - создать qr-code",
-#         )
+#         pass
 #     if post == "учитель":
-#         await message.answer(
-#             "Это справочная информация:\n"
-#             "/start - начать сначала\n"
-#             "/help - помощь\n"
-#             "/info - информация\n"
-#             "/read_qr_code - считать qr-code",
-#         )
-#     if post == "родитель":
-#         await message.answer(
-#             "Это справочная информация:\n"
-#             "/start - начать сначала\n"
-#             "/help - помощь\n"
-#             "/info - информация\n"
-#             "/about_child - о ребенке",
-#         )
+#         # await message.answer(
+#         #     "Это справочная информация:\n"
+#         #     "/start - начать сначала\n"
+#         #     "/help - помощь\n"
+#         #     "/info - информация\n"
+#         #     "/read_qr_code - считать qr-code",
+#         # )
+#         text = message.text.split("\n")
+#         if text[0] == "come":
+#             for st in text[1:]:
+#                 url = f"http://127.0.0.1:8080/api/"
+#                 if tg_id[0] != "@":
+#                     tg_id = "@" + tg_id
+#                 res = requests.post(url, json={"tg_id": tg_id})
+#     # if post == "родитель":
+#     # await message.answer(
+#     #     "Это справочная информация:\n"
+#     #     "/start - начать сначала\n"
+#     #     "/help - помощь\n"
+#     #     "/info - информация\n"
+#     #     "/about_child - о ребенке",
+#     # )
+
 
 async def send_to_parent():
     """Функция для отправки сообщения в будние дни в 10:00"""
@@ -277,7 +293,8 @@ async def send_to_parent():
         res = requests.post(url)
         sp_tg_id = res.json()["message"]
         for tg_id in sp_tg_id:
-            await bot.send_message(chat_id=tg_id, text=f"Ваш ребенок сегодня, в {datetime.now().strftime("%d:%m:%y")}, на учебу не явился")
+            await bot.send_message(chat_id=tg_id,
+                                   text=f"Ваш ребенок сегодня, в {datetime.now().strftime("%d:%m:%y")}, на учебу не явился")
 
 
 async def scheduler():
@@ -285,6 +302,7 @@ async def scheduler():
     while True:
         await send_to_parent()
         await asyncio.sleep(60)  # Проверка каждую минуту
+
 
 # Запуск бота
 async def main():
