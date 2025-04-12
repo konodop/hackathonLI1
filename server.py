@@ -212,6 +212,7 @@ def qrcodicki(sign_up_request: SignUpRequestStud):
 @app.post("/api/profile", tags=["B2B"])
 def prof(sign_up_request: SignInRequest):
     tg_id = sign_up_request.tg_id
+    print(tg_id)
     cur.execute("""SELECT * FROM Student WHERE tg_id = ?;""", (tg_id,))
     stud = cur.fetchone()
     if stud:
@@ -250,7 +251,7 @@ def prof(sign_up_request: SignInRequest):
         )
     else:
         return JSONResponse(
-            status_code=422,
+            status_code=403,
             content={
                 "message": "Не зарегестрирован"
             },
@@ -260,17 +261,18 @@ def prof(sign_up_request: SignInRequest):
 @app.post("/api/getQR", tags=["B2B"])
 def qrcodicki(sign_up_request: SignInRequest):
     tg_id = sign_up_request.tg_id
+    print(tg_id)
     cur.execute("""SELECT * FROM Student WHERE tg_id = ?;""", (tg_id,))
-    id = cur.fetchone()[0]
+    id = cur.fetchone()
     if not id:
         return JSONResponse(
-            status_code=422,
+            status_code=400,
             content={
                 "status": "error",
                 "message": "На этот аккаунт никто не зарегестрирован"
             },
         )
-    filename = os.path.join(QR_FOLDER, f"{id}_qr.png")
+    filename = os.path.join(QR_FOLDER, f"{id[0]}_qr.png")
     generate_qr(id, filename)
     return JSONResponse(
         status_code=200,
@@ -321,20 +323,18 @@ async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
         f.write(content)
     students = QRscan(filepath)
     if place == "Учитель":
-        studs = []
-        for id in students:
-            cur.execute("""SELECT * FROM Student WHERE id = ?;""", (id,))
-            studs.append(cur.fetchone())
-        return {"message": studs}
+        return {"message": students}
     else:
         now = datetime.now().strftime("%H:%M:%S")
-        for id in students:
+        for id_ in students:
+            id = int(id_[1:-1].split(", ")[0])
+            print(id, id_)
             if place[11:-2] == "Столовая":
-                cur.execute(f"""UPDATE School_attendance SET lunch = {now} WHERE id = ?;""", (id,))
+                cur.execute(f"""UPDATE School_attendance SET lunch = '{now}' WHERE id = ?;""", (id,))
             elif place[11:-2] == "Вход":
-                cur.execute(f"""UPDATE School_attendance SET come = {now} WHERE id = ?;""", (id,))
+                cur.execute(f"""UPDATE School_attendance SET come = '{now}' WHERE id = ?;""", (id,))
             elif place[11:-2] == "Выход":
-                cur.execute(f"""UPDATE School_attendance SET out = {now} WHERE id = ?;""", (id,))
+                cur.execute(f"""UPDATE School_attendance SET out = '{now}' WHERE id = ?;""", (id,))
             elif place[11:-2] == "Интернат Вход":
                 cur.execute(f"""UPDATE School_attendance SET at_boarding_school = 1 WHERE id = ?;""", (id,))
             elif place[11:-2] == "Интернат Выход":

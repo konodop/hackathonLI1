@@ -1,12 +1,15 @@
 import json
 import logging
 import os
+from datetime import datetime, time
 
+import pytz
 import requests
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import InputFile, FSInputFile
 
 
 # Состояния FSM
@@ -16,6 +19,8 @@ class ReadStates(StatesGroup):
 def get_user_info(tg_id, info=None):
     get_info = False
     url = f"http://127.0.0.1:8080/api/profile"
+    if tg_id[0] != "@":
+        tg_id = "@" + tg_id
     res = requests.post(url, json={"tg_id": tg_id})
     if get_info:
         if info:
@@ -42,7 +47,7 @@ dp = Dispatcher()
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     info = json.loads(message.model_dump_json())
-    tg_id = "@" + info["from_user"]["username"]
+    tg_id = info["from_user"]["username"]
     status, post = get_user_info(tg_id, info)
     if status != 200:
         await message.answer(
@@ -53,7 +58,6 @@ async def cmd_start(message: types.Message):
     kb = [
         [types.KeyboardButton(text="Помощь")],
         [types.KeyboardButton(text="Информация")],
-        [types.KeyboardButton(text="Кнопки")],
     ]
 
     keyboard = types.ReplyKeyboardMarkup(
@@ -77,7 +81,7 @@ async def cmd_start(message: types.Message):
 @dp.message(F.text.lower() == "помощь")
 async def cmd_help(message: types.Message):
     info = json.loads(message.model_dump_json())
-    tg_id = "@" + info["from_user"]["username"]
+    tg_id = info["from_user"]["username"]
     status, post = get_user_info(tg_id, info)
     if status != 200:
         await message.answer(
@@ -91,7 +95,7 @@ async def cmd_help(message: types.Message):
             "/start - начать сначала\n"
             "/help - помощь\n"
             "/info - информация\n"
-            "/Create_qr_code - создать qr-code",
+            "/create_qr_code - создать qr-code",
         )
     if post == "учитель":
         await message.answer(
@@ -107,7 +111,15 @@ async def cmd_help(message: types.Message):
             "/start - начать сначала\n"
             "/help - помощь\n"
             "/info - информация\n"
-            "/about_child - о ребенке",
+            "/submit_application - подать заявление",
+        )
+    if post == "воспитатель":
+        await message.answer(
+            "Это справочная информация:\n"
+            "/start - начать сначала\n"
+            "/help - помощь\n"
+            "/info - информация\n"
+            "/read_qr_code - о ребенке",
         )
 
 
@@ -116,43 +128,58 @@ async def cmd_help(message: types.Message):
 @dp.message(F.text.lower() == "информация")
 async def cmd_info(message: types.Message):
     await message.answer(
-        "Этот бот создан для хакатона:\n"
+        "Этот бот создан для хакатона\n"
     )
 
 
 @dp.message(Command("create_qr_code"))
-async def cmd_info(message: types.Message):
+async def cmd_create(message: types.Message):
     info = json.loads(message.model_dump_json())
-    tg_id = "@" + info["from_user"]["username"]
+    tg_id = info["from_user"]["username"]
+    if tg_id[0] != "@":
+        tg_id = "@" + tg_id
+
     status, post = get_user_info(tg_id, info)
 
-    if status != 200 or post != "ученик":
+    if status > 201 or post != "ученик":
         await message.answer(
             "Не хватает прав на использование бота\n"
             "Чтобы решить эту проблему обратитесь к администратору"
         )
 
-    # url = "http://127.0.0.1:8080/api/getQR"
-    # res = requests.get(url, {"tg_id": tg_id})
-    #
-    # res.status_code != 200
-    #
-    # try:
-    #     # Открываем и отправляем фото
-    #     with open(PATH_OUTPUT, 'rb') as photo:
-    #         await message.reply_photo(photo, caption="Вот ваше изображение!")
-    # except Exception as e:
-    #     await message.reply(f"Произошла ошибка: {e}")
+    url = "http://127.0.0.1:8080/api/getQR"
+    res = requests.post(url, json={"tg_id": tg_id})
+
+    if res.status_code > 201:
+        await message.answer(
+            "Не хватает прав на использование бота\n"
+            "Чтобы решить эту проблему обратитесь к администратору"
+        )
+
+    get_user_info(tg_id, info)
+
+    path = res.json()["message"]
+    try:
+        # Отправляем изображение из файла
+        photo = FSInputFile(path)
+        await message.reply_photo(photo)
+        logging.info(f"Изображение отправлено пользователю {message.from_user.id}")
+    except FileNotFoundError:
+        await message.reply("Файл image.jpg не найден!")
+        logging.error("Файл image.jpg не найден")
+    except Exception as e:
+        await message.reply("Произошла ошибка при отправке изображения")
+        logging.error(f"Ошибка: {str(e)}")
 
 
 
 @dp.message(Command("read_qr_code"))
 async def cmd_read(message: types.Message, state: FSMContext):
     info = json.loads(message.model_dump_json())
-    tg_id = "@" + info["from_user"]["username"]
+    tg_id = info["from_user"]["username"]
     status, post = get_user_info(tg_id, info)
 
-    if status != 200 or post != "учитель":
+    if status != 200 or post != "учитель" or post != "воспитатель":
         await message.answer(
             "Не хватает прав на использование бота\n"
             "Чтобы решить эту проблему обратитесь к администратору"
@@ -183,13 +210,13 @@ async def handle_image(message: types.Message, state: FSMContext):
         new_file.write(file_data.read())
 
     url = 'http://localhost:8080/api/upload'
-    place_data = {"place": "Столовая"}  # можно написать вход либо выход
+    place_data = {"place": "Учитель"}  # можно написать вход либо выход
     files = {
         'file': open(save_path, 'rb'),
         'place': (None, str(place_data))  # Отправляем place как строку
     }
 
-    response = requests.post(url, files=files)
+    requests.post(url, files=files)
 
 
 # Обработчик случая, когда ожидается фото, но пришло что-то другое
@@ -197,44 +224,60 @@ async def handle_image(message: types.Message, state: FSMContext):
 async def handle_wrong_input(message: types.Message):
     await message.answer("Пожалуйста, отправьте изображение.")
 
+#
+# # Обработчик текстовых сообщений
+# @dp.message()
+# async def echo(message: types.Message):
+#     info = json.loads(message.model_dump_json())
+#     tg_id = "@" + info["from_user"]["username"]
+#     status, post = get_user_info(tg_id, info)
+#     if status != 200:
+#         await message.answer(
+#             "Не хватает прав на использование бота\n"
+#             "Чтобы решить эту проблему обратитесь к администратору"
+#         )
+#
+#     if post == "ученик":
+#         await message.answer(
+#             "Это справочная информация:\n"
+#             "/start - начать сначала\n"
+#             "/help - помощь\n"
+#             "/info - информация\n"
+#             "/create_qr_code - создать qr-code",
+#         )
+#     if post == "учитель":
+#         await message.answer(
+#             "Это справочная информация:\n"
+#             "/start - начать сначала\n"
+#             "/help - помощь\n"
+#             "/info - информация\n"
+#             "/read_qr_code - считать qr-code",
+#         )
+#     if post == "родитель":
+#         await message.answer(
+#             "Это справочная информация:\n"
+#             "/start - начать сначала\n"
+#             "/help - помощь\n"
+#             "/info - информация\n"
+#             "/about_child - о ребенке",
+#         )
 
-# Обработчик текстовых сообщений
-@dp.message()
-async def echo(message: types.Message):
-    info = json.loads(message.model_dump_json())
-    tg_id = "@" + info["from_user"]["username"]
-    status, post = get_user_info(tg_id, info)
-    if status != 200:
-        await message.answer(
-            "Не хватает прав на использование бота\n"
-            "Чтобы решить эту проблему обратитесь к администратору"
-        )
+async def send_to_parent():
+    """Функция для отправки сообщения в будние дни в 10:00"""
+    now = datetime.now(pytz.timezone('Europe/Moscow'))  # Укажите свою временную зону
+    if now.weekday() < 6 and now.time() >= time(10, 0) and now.time() <= time(10, 1):
+        url = "http://127.0.0.1:8080/api/skips"
+        res = requests.post(url)
+        sp_tg_id = res.json()["message"]
+        for tg_id in sp_tg_id:
+            await bot.send_message(chat_id=tg_id, text=f"Ваш ребенок сегодня, в {datetime.now().strftime("%d:%m:%y")}, на учебу не явился")
 
-    if post == "ученик":
-        await message.answer(
-            "Это справочная информация:\n"
-            "/start - начать сначала\n"
-            "/help - помощь\n"
-            "/info - информация\n"
-            "/Create_qr_code - создать qr-code",
-        )
-    if post == "учитель":
-        await message.answer(
-            "Это справочная информация:\n"
-            "/start - начать сначала\n"
-            "/help - помощь\n"
-            "/info - информация\n"
-            "/read_qr_code - считать qr-code",
-        )
-    if post == "родитель":
-        await message.answer(
-            "Это справочная информация:\n"
-            "/start - начать сначала\n"
-            "/help - помощь\n"
-            "/info - информация\n"
-            "/about_child - о ребенке",
-        )
 
+async def scheduler():
+    """Планировщик, проверяющий время каждую минуту"""
+    while True:
+        await send_to_parent()
+        await asyncio.sleep(60)  # Проверка каждую минуту
 
 # Запуск бота
 async def main():
