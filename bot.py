@@ -9,6 +9,7 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import InputFile, FSInputFile
 
 
@@ -38,10 +39,15 @@ logger = logging.getLogger(__name__)
 # Токен вашего бота
 TOKEN = "8139226754:AAHXJZwwS82ijvHcI615UicFxfeisqB_LPY"
 
-# Инициализация бота и диспетчера
+# Инициализация бота и диспетчера с FSM
+storage = MemoryStorage()
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+# Состояния бота
+class UserStates(StatesGroup):
+    waiting_for_image = State()
+    choosing_operation = State()
 
 # Обработчик команды /start
 @dp.message(Command("start"))
@@ -210,13 +216,14 @@ async def handle_image(message: types.Message, state: FSMContext):
         new_file.write(file_data.read())
 
     url = 'http://localhost:8080/api/upload'
-    place_data = {"place": "Учитель"}  # можно написать вход либо выход
+    place_data = {"place": "учитель"}  # можно написать вход либо выход
     files = {
         'file': open(save_path, 'rb'),
         'place': (None, str(place_data))  # Отправляем place как строку
     }
 
-    requests.post(url, files=files)
+    res = requests.post(url, files=files)
+    print(res.json())
 
 
 # Обработчик случая, когда ожидается фото, но пришло что-то другое

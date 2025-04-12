@@ -322,7 +322,8 @@ async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
         content = await file.read()
         f.write(content)
     students = QRscan(filepath)
-    if place == "Учитель":
+    print(place)
+    if place[11:-2] in ("учитель", "воспитатель"):
         return {"message": students}
     else:
         now = datetime.now().strftime("%H:%M:%S")
