@@ -208,7 +208,7 @@ async def handle_image(message: types.Message, state: FSMContext):
     file_path = file.file_path
 
     # Генерируем имя файла
-    file_name = f"мусор.jpg"
+    file_name = f"времнное_хранилеще.jpg"
     save_path = os.path.join(file_name)
 
     # Скачиваем и сохраняем файл
