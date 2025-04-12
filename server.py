@@ -298,6 +298,21 @@ async def skips():
     )
 
 
+@app.get("/api/dorm")
+async def indor():
+    cur.execute("""SELECT tg_id FROM School_attendance WHERE at_boarding_school = 1;""")
+    s = cur.fetchall()
+    students = []
+    for i in s:
+        students.append(id[0])
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": students
+        },
+    )
+
+
 @app.post("/api/upload")
 async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -307,7 +322,6 @@ async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
     students = QRscan(filepath)
     if place == "Учитель":
         studs = []
-
         for id in students:
             cur.execute("""SELECT * FROM Student WHERE id = ?;""", (id,))
             studs.append(cur.fetchone())
