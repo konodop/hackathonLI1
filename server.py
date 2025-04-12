@@ -1,5 +1,4 @@
 import os
-import re
 import sqlite3
 from datetime import datetime
 
@@ -85,7 +84,7 @@ def star(sign_up_request: SignUpRequestTeacher):
     cur.execute("""SELECT * FROM Teacher WHERE tg_id = ?;""", (tg_id,))
     if cur.fetchone():
         return JSONResponse(
-            status_code=409,
+            status_code=400,
             content={
                 "status": "error",
                 "message": "Такой аккаунт уже зарегистрирован."
@@ -94,7 +93,7 @@ def star(sign_up_request: SignUpRequestTeacher):
     cur.execute("""SELECT * FROM Teacher WHERE name = ? AND surname = ?;""", (name, surname,))
     if cur.fetchone():
         return JSONResponse(
-            status_code=409,
+            status_code=400,
             content={
                 "status": "error",
                 "message": "Такой учитель уже зарегистрирован."
@@ -102,7 +101,52 @@ def star(sign_up_request: SignUpRequestTeacher):
         )
     teach = (surname, name, fathername, tg_id, subject)
     cur.execute("""INSERT INTO Teacher (surname, name, fathername, tg_id, school_subject)
-     VALUES (?, ?, ?, ?, ?, ?);""", teach)
+     VALUES (?, ?, ?, ?, ?);""", teach)
+
+    conn.commit()
+    return JSONResponse(
+        status_code=201,
+        content={
+            "message": "Спасибо за регистрацию"
+        },
+    )
+
+
+@app.post("/api/vospit/sign-up", tags=["B2B"])
+def star(sign_up_request: SignUpRequestTeacher):
+    name = sign_up_request.name
+    surname = sign_up_request.surname
+    fathername = sign_up_request.fathername
+    tg_id = sign_up_request.tg_id
+    if len(name) < 2 or len(name) > 30 or len(surname) < 3 or len(surname) > 30:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Ошибка в данных запроса."
+            },
+        )
+    cur.execute("""SELECT * FROM Abuy WHERE tg_id = ?;""", (tg_id,))
+    if cur.fetchone():
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Такой аккаунт уже зарегистрирован."
+            },
+        )
+    cur.execute("""SELECT * FROM Abuy WHERE name = ? AND surname = ?;""", (name, surname,))
+    if cur.fetchone():
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Такой воспитатель уже зарегистрирован."
+            },
+        )
+    vospit = (surname, name, fathername, tg_id)
+    cur.execute("""INSERT INTO Abuy (surname, name, fathername, tg_id)
+     VALUES (?, ?, ?, ?);""", vospit)
 
     conn.commit()
     return JSONResponse(
@@ -140,7 +184,7 @@ def qrcodicki(sign_up_request: SignUpRequestStud):
     cur.execute("""SELECT * FROM Student WHERE name = ? AND surname = ?;""", (name, surname,))
     if cur.fetchone():
         return JSONResponse(
-            status_code=409,
+            status_code=400,
             content={
                 "status": "error",
                 "message": "Такой ученик уже зарегистрирован."
@@ -195,6 +239,15 @@ def prof(sign_up_request: SignInRequest):
                 "message": "родитель"
             },
         )
+    cur.execute("""SELECT * FROM Abuy WHERE tg_id = ?;""", (tg_id,))
+    vosp = cur.fetchone()
+    if vosp:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "воспитатель"
+            },
+        )
     else:
         return JSONResponse(
             status_code=422,
@@ -232,13 +285,30 @@ async def skips():
     skip = "00:00:00"
     cur.execute("""SELECT id FROM School_attendance WHERE come = ?;""", (skip,))
     s = cur.fetchall()
-    d = []
+    parents = []
     for id in s:
-        d.append(cur.execute("""SELECT tg_id FROM Parent WHERE son = ?;""", (id[0],))[0])
+        cur.execute("""SELECT tg_id FROM Parent WHERE son = ?;""", (id[0],))
+        parent = cur.fetchone()
+        parents.append(parent)
     return JSONResponse(
         status_code=200,
         content={
-            "message": d
+            "message": parents
+        },
+    )
+
+
+@app.get("/api/dorm")
+async def indor():
+    cur.execute("""SELECT tg_id FROM School_attendance WHERE at_boarding_school = 1;""")
+    s = cur.fetchall()
+    students = []
+    for i in s:
+        students.append(id[0])
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": students
         },
     )
 
@@ -252,7 +322,6 @@ async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
     students = QRscan(filepath)
     if place == "Учитель":
         studs = []
-
         for id in students:
             cur.execute("""SELECT * FROM Student WHERE id = ?;""", (id,))
             studs.append(cur.fetchone())
@@ -266,6 +335,11 @@ async def upload_file(place: str = Form(...), file: UploadFile = File(...)):
                 cur.execute(f"""UPDATE School_attendance SET come = {now} WHERE id = ?;""", (id,))
             elif place[11:-2] == "Выход":
                 cur.execute(f"""UPDATE School_attendance SET out = {now} WHERE id = ?;""", (id,))
+            elif place[11:-2] == "Интернат Вход":
+                cur.execute(f"""UPDATE School_attendance SET at_boarding_school = 1 WHERE id = ?;""", (id,))
+            elif place[11:-2] == "Интернат Выход":
+                cur.execute(f"""UPDATE School_attendance SET at_boarding_school = 0 WHERE id = ?;""",
+                            (id,))
             conn.commit()
 
         return {"message": "Данные обновлены"}
